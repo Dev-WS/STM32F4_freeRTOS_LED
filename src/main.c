@@ -29,7 +29,7 @@ void printmsg(char *msg);
 
 
 void led_task_handler(void *params);
-void button_task_handler(void *params);
+void button_handler(void *params);
 
 #define FALSE 0
 #define TRUE 1
@@ -51,7 +51,7 @@ int main(void)
 
 	xTaskCreate(led_task_handler, "LED", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 
-	xTaskCreate(button_task_handler, "BUTTON", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+	xTaskCreate(button_handler, "BUTTON", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 
 	//GPIO_WriteBit(GPIOD, GPIO_Pin_15, 1);
 	vTaskStartScheduler();
@@ -77,7 +77,7 @@ void led_task_handler(void *params)
 }
 
 
-void button_task_handler(void *params)
+void button_handler(void *params)
 {
 	while(1){
 
@@ -151,7 +151,9 @@ void printmsg(char *msg)
 void prvSetupGpio(void)
 {
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+	RCC_AHB2PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);  //SYSCFG AHB2
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
+
 
 	GPIO_InitTypeDef led_init;
 	led_init.GPIO_Mode = GPIO_Mode_OUT;
@@ -171,7 +173,14 @@ void prvSetupGpio(void)
 	GPIO_Init(GPIOA,&button_init);
 
 
+	SYSCFG_EXTILineConfig(GPIOA, EXTI_PinSource13);
+	EXTI_InitTypeDef exti_init;
+	exti_init.EXTI_Line = EXTI_Line13;
+	exti_init.EXTI_LineCmd = ENABLE;
+	exti_init.EXTI_Mode = EXTI_Mode_Interrupt;
+	exti_init.EXTI_Trigger = EXTI_Trigger_Falling;
+	EXTI_Init(&exti_init);
 
-
-
+	NVIC_SetPriority(EXTI15_10_IRQn,5);
+	NVIC_EnableIRQ(EXTI15_10_IRQn);
 }
