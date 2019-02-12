@@ -44,7 +44,10 @@ int main(void)
 	RCC_DeInit();
 	SystemCoreClockUpdate();
 	prvSetupHardware();
-	prvSetupGpio();
+
+	SEGGER_SYSVIEW_Conf();
+	SEGGER_SYSVIEW_Start();
+
 
 	xTaskCreate(led_task_handler, "LED", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 
@@ -130,6 +133,7 @@ static void prvSetupUart(void)
 static void prvSetupHardware(void)
 {
 	prvSetupUart();
+	prvSetupGpio();
 
 }
 
@@ -165,6 +169,9 @@ void prvSetupGpio(void)
 	button_init.GPIO_Speed = GPIO_Low_Speed;
 	button_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	GPIO_Init(GPIOA,&button_init);
+
+
+
 
 
 }
