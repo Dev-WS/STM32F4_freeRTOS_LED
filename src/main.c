@@ -9,6 +9,8 @@
 */
 
 
+#include <string.h>
+#include <stdint.h>
 #include "FreeRTOS.h"
 #include "stm32f4xx.h"
 #include "task.h"
@@ -18,11 +20,23 @@
 
 static void prvSetupHardware(void);
 static void prvSetupUart(void);
+void prvSetupGpio(void);
+
 
 char usr_msg[250];
 void printmsg(char *msg);
 
 
+
+void led_task_handler(void *params);
+void button_task_handler(void *params);
+
+#define FALSE 0
+#define TRUE 1
+#define NOT_PRESSED FALSE
+#define PRESSED TRUE
+
+uint8_t button_status_flag = NOT_PRESSED;
 
 int main(void)
 {
@@ -30,15 +44,50 @@ int main(void)
 	RCC_DeInit();
 	SystemCoreClockUpdate();
 	prvSetupHardware();
+	prvSetupGpio();
 
+	xTaskCreate(led_task_handler, "LED", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 
+	xTaskCreate(button_task_handler, "BUTTON", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 
-
+	//GPIO_WriteBit(GPIOD, GPIO_Pin_15, 1);
+	vTaskStartScheduler();
 
 	for(;;);
 }
 
+void led_task_handler(void *params)
+{
 
+	while(1){
+
+		if(button_status_flag == PRESSED){
+
+			GPIO_WriteBit(GPIOD, GPIO_Pin_12, Bit_SET);
+
+		}
+		else {
+			GPIO_WriteBit(GPIOD, GPIO_Pin_12, Bit_RESET);
+		}
+
+	}
+}
+
+
+void button_task_handler(void *params)
+{
+	while(1){
+
+			if (GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_0))
+			{
+				button_status_flag = PRESSED;
+			}
+			else{
+				button_status_flag = NOT_PRESSED;
+			}
+
+	}
+}
 
 static void prvSetupUart(void)
 {
@@ -49,7 +98,6 @@ static void prvSetupUart(void)
 		//1 UART Enable
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
-
 	memset(&gpio_uart_pins, 0, sizeof(gpio_uart_pins));
 
 	gpio_uart_pins.GPIO_Pin = GPIO_Pin_2 | GPIO_Pin_3;
@@ -93,5 +141,30 @@ void printmsg(char *msg)
 		USART_SendData(USART2, msg[i]);
 		//USART_GetFlagStatus(USART2, )
 	}
+
+}
+
+void prvSetupGpio(void)
+{
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
+
+	GPIO_InitTypeDef led_init;
+	led_init.GPIO_Mode = GPIO_Mode_OUT;
+	led_init.GPIO_OType = GPIO_OType_PP;
+	led_init.GPIO_Pin = GPIO_Pin_12;
+	led_init.GPIO_Speed = GPIO_Low_Speed;
+	led_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_Init(GPIOD,&led_init);
+
+
+	GPIO_InitTypeDef button_init;
+	button_init.GPIO_Mode = GPIO_Mode_IN;
+	button_init.GPIO_OType = GPIO_OType_PP;
+	button_init.GPIO_Pin = GPIO_Pin_0;
+	button_init.GPIO_Speed = GPIO_Low_Speed;
+	button_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_Init(GPIOA,&button_init);
+
 
 }
