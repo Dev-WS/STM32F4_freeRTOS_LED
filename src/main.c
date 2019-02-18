@@ -173,9 +173,9 @@ void prvSetupGpio(void)
 	GPIO_Init(GPIOA,&button_init);
 
 
-	SYSCFG_EXTILineConfig(GPIOA, EXTI_PinSource13);
+	SYSCFG_EXTILineConfig(GPIOD, EXTI_PinSource12);
 	EXTI_InitTypeDef exti_init;
-	exti_init.EXTI_Line = EXTI_Line13;
+	exti_init.EXTI_Line = EXTI_Line12;
 	exti_init.EXTI_LineCmd = ENABLE;
 	exti_init.EXTI_Mode = EXTI_Mode_Interrupt;
 	exti_init.EXTI_Trigger = EXTI_Trigger_Falling;
