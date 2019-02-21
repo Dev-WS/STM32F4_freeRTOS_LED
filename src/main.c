@@ -14,8 +14,10 @@
 #include "FreeRTOS.h"
 #include "stm32f4xx.h"
 #include "task.h"
+#include <stdio.h>
 			
-
+TaskHandle_t xTaskHandle1= NULL;
+TaskHandle_t xTaskHandle2= NULL;
 
 
 static void prvSetupHardware(void);
@@ -28,8 +30,9 @@ void printmsg(char *msg);
 
 
 
-void led_task_handler(void *params);
-void button_handler(void *params);
+void vtask_led_handler(void *params);
+void vtask_button_handler(void *params);
+void rtos_delay(uint32_t delay_in_ms);
 
 #define FALSE 0
 #define TRUE 1
@@ -37,6 +40,9 @@ void button_handler(void *params);
 #define PRESSED TRUE
 
 uint8_t button_status_flag = NOT_PRESSED;
+
+
+
 
 int main(void)
 {
@@ -49,9 +55,9 @@ int main(void)
 	SEGGER_SYSVIEW_Start();
 
 
-	xTaskCreate(led_task_handler, "LED", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+	xTaskCreate(vtask_led_handler, "TASK-LED", 500, NULL, 2, &xTaskHandle1);
 
-	xTaskCreate(button_handler, "BUTTON", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+	xTaskCreate(vtask_button_handler, "TASK-BUTTON", 500, NULL, 2, &xTaskHandle2);
 
 	//GPIO_WriteBit(GPIOD, GPIO_Pin_15, 1);
 	vTaskStartScheduler();
@@ -59,35 +65,50 @@ int main(void)
 	for(;;);
 }
 
-void led_task_handler(void *params)
+void vtask_led_handler(void *params)
 {
 
 	while(1){
 
-		if(button_status_flag == PRESSED){
 
-			GPIO_WriteBit(GPIOD, GPIO_Pin_12, Bit_SET);
+		if (xTaskNotifyWait(0,0,NULL, portMAX_DELAY)== pdTRUE)
+		{
+			GPIO_ToggleBits(GPIOD, GPIO_Pin_12);
+			sprintf(usr_msg, "Test");
+			printmsg(usr_msg);
+		}
 
-		}
-		else {
-			GPIO_WriteBit(GPIOD, GPIO_Pin_12, Bit_RESET);
-		}
+//		if(button_status_flag == PRESSED){
+//
+//			GPIO_WriteBit(GPIOD, GPIO_Pin_12, Bit_SET);
+//
+//		}
+//		else {
+//			GPIO_WriteBit(GPIOD, GPIO_Pin_12, Bit_RESET);
+//		}
 
 	}
 }
 
 
-void button_handler(void *params)
+void vtask_button_handler(void *params)
 {
 	while(1){
 
-			if (GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_0))
+			if(!GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_0))
 			{
-				button_status_flag = PRESSED;
+				rtos_delay(100);
+
+				xTaskNotify(xTaskHandle1, 0x0, eNoAction);
 			}
-			else{
-				button_status_flag = NOT_PRESSED;
-			}
+
+//			if (GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_0))
+//			{
+//				button_status_flag = PRESSED;
+//			}
+//			else{
+//				button_status_flag = NOT_PRESSED;
+//			}
 
 	}
 }
@@ -183,4 +204,17 @@ void prvSetupGpio(void)
 
 	NVIC_SetPriority(EXTI15_10_IRQn,5);
 	NVIC_EnableIRQ(EXTI15_10_IRQn);
+}
+
+
+
+void rtos_delay(uint32_t delay_in_ms)
+{
+
+	uint32_t current_tick_count = xTaskGetTickCount();
+
+	uint32_t delay_in_ticks = (delay_in_ms * configTICK_RATE_HZ)/1000 ;
+
+	while(xTaskGetTickCount() < (current_tick_count + delay_in_ms));
+
 }
